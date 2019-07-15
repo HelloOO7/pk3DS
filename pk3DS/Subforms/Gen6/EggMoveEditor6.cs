@@ -36,10 +36,12 @@ namespace pk3DS
             CB_Species.SelectedIndex = 0;
             RandSettings.GetFormSettings(this, groupBox1.Controls);
         }
+
         private readonly byte[][] files;
         private int entry = -1;
         private readonly string[] movelist = Main.Config.getText(TextName.MoveNames);
         private bool dumping;
+
         private void setupDGV()
         {
             string[] sortedmoves = (string[])movelist.Clone();
@@ -58,6 +60,7 @@ namespace pk3DS
         }
 
         private EggMoves pkm = new EggMoves6(new byte[0]);
+
         private void getList()
         {
             entry = WinFormsUtil.getIndex(CB_Species);
@@ -79,6 +82,7 @@ namespace pk3DS
 
             dgv.CancelEdit();
         }
+
         private void setList()
         {
             if (entry < 1 || dumping) return;
@@ -104,7 +108,7 @@ namespace pk3DS
             ushort[] HMs = { 15, 19, 57, 70, 127, 249, 291 };
             ushort[] TMs = { };
             if (CHK_HMs.Checked && Main.ExeFSPath != null)
-                TMHMEditor6.getTMHMList(Main.Config.ORAS, ref TMs, ref HMs);
+                TMHMEditor6.getTMHMList(Main.Config.ORAS, out TMs, out HMs);
 
             List<int> banned = new List<int> { 165, 621 }; // Struggle, Hyperspace Fury
             if (!CHK_HMs.Checked)
@@ -125,6 +129,7 @@ namespace pk3DS
             getList();
             WinFormsUtil.Alert("All Pokémon's Egg Moves have been randomized!", "Press the Dump button to see the new Egg Moves!");
         }
+
         private void B_Dump_Click(object sender, EventArgs e)
         {
             if (DialogResult.Yes != WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Dump all Egg Moves to Text File?"))
@@ -157,6 +162,7 @@ namespace pk3DS
             setList();
             RandSettings.SetFormSettings(this, groupBox1.Controls);
         }
+
         private void calcStats()
         {
             Move[] MoveData = Main.Config.Moves;

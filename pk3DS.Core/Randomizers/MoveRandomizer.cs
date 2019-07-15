@@ -41,6 +41,7 @@ namespace pk3DS.Core.Randomizers
         private int loopctr = 0;
 
         public int[] GetRandomLearnset(int index, int movecount) => GetRandomLearnset(SpeciesStat[index].Types, movecount);
+
         public int[] GetRandomLearnset(int[] Types, int movecount)
         {
             var oldSTABCount = rSTABCount;
@@ -49,7 +50,9 @@ namespace pk3DS.Core.Randomizers
             rSTABCount = oldSTABCount;
             return moves;
         }
+
         public int[] GetRandomMoveset(int index, int movecount = 4) => GetRandomMoveset(SpeciesStat[index].Types, movecount);
+
         public int[] GetRandomMoveset(int[] Types, int movecount = 4)
         {
             loopctr = 0;
@@ -73,6 +76,7 @@ namespace pk3DS.Core.Randomizers
                 moves[i] = RandMove.Next();
             return moves;
         }
+
         private int GetRandomSTABMove(int[] types)
         {
             int move;
@@ -80,6 +84,7 @@ namespace pk3DS.Core.Randomizers
             while (!types.Contains(MoveData[move].Type));
             return move;
         }
+
         private bool IsMovesetMeetingRequirements(int[] moves, int count)
         {
             if (rDMG && rDMGCount > moves.Count(move => MoveData[move].Category != 0))
@@ -89,6 +94,17 @@ namespace pk3DS.Core.Randomizers
                 return false;
 
             return moves.Distinct().Count() == count;
+        }
+
+        public void ReorderMovesPower(IList<int> moves)
+        {
+            var data = moves.Select((Move, Index) => new {Index, Move, Data = MoveData[Move]});
+            var powered = data.Where(z => z.Data.Power > 1).ToList();
+            var indexes = powered.Select(z => z.Index).ToList();
+            var order = powered.OrderBy(z => z.Data.Power * Math.Max(1, (z.Data.HitMin + z.Data.HitMax)/2m)).ToList();
+
+            for (var i = 0; i < order.Count; i++)
+                moves[indexes[i]] = order[i].Move;
         }
 
         private static readonly int[] firstMoves =
@@ -103,15 +119,19 @@ namespace pk3DS.Core.Randomizers
             98,  // Quick Attack
             122, // Lick
             141, // Leech Life
-            
+
         };
+
         private static readonly GenericRandomizer first = new GenericRandomizer(firstMoves);
+
         public int GetRandomFirstMoveAny()
         {
             first.Reset();
             return first.Next();
         }
+
         public int GetRandomFirstMove(int index) => GetRandomFirstMove(SpeciesStat[index].Types);
+
         public int GetRandomFirstMove(int[] types)
         {
             first.Reset();

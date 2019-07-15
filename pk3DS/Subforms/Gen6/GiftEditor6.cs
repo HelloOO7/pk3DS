@@ -59,7 +59,9 @@ namespace pk3DS
         private readonly string[] specieslist = Main.Config.getText(TextName.SpeciesNames);
         private readonly string[] natureslist = Main.Config.getText(TextName.Natures);
         private readonly Dictionary<int, int[]> MegaDictionary;
-        private static int[] FinalEvo;
+        private static int[] FinalEvo = Legal.FinalEvolutions_6;
+        private static int[] Legendary = Legal.Legendary_6;
+        private static int[] Mythical = Legal.Mythical_6;
         
         private readonly string[] ability =
         {
@@ -68,6 +70,7 @@ namespace pk3DS
             "Ability 2",
             "Hidden Ability",
         };
+
         private void B_Save_Click(object sender, EventArgs e)
         {
             saveEntry();
@@ -75,10 +78,12 @@ namespace pk3DS
             RandSettings.SetFormSettings(this, tabPage2.Controls);
             Close();
         }
+
         private void B_Cancel_Click(object sender, EventArgs e)
         {
             Close();
         }
+
         private void loadData()
         {
             FieldData = File.ReadAllBytes(FieldPath);
@@ -86,7 +91,7 @@ namespace pk3DS
             LB_Gifts.Items.Clear();
             for (int i = 0; i < GiftData.Length; i++)
             {
-                GiftData[i] = new EncounterGift6(FieldData.Skip(fieldOffset + i * fieldSize).Take(fieldSize).ToArray(), Main.Config.ORAS);
+                GiftData[i] = new EncounterGift6(FieldData.Skip(fieldOffset + (i * fieldSize)).Take(fieldSize).ToArray(), Main.Config.ORAS);
                 LB_Gifts.Items.Add($"{i:00} - {specieslist[GiftData[i].Species]}");
             }
             foreach (var s in ability) CB_Ability.Items.Add(s);
@@ -96,11 +101,10 @@ namespace pk3DS
             CB_Gender.Items.Add("♂ / Male");
             CB_Gender.Items.Add("♀ / Female");
 
-            FinalEvo = Legal.FinalEvolutions_6;
-
             loaded = true;
             LB_Gifts.SelectedIndex = 0;
         }
+
         private void saveData()
         {
             // Check to see if a starter has been modified right before we write data.
@@ -121,7 +125,7 @@ namespace pk3DS
 
             for (int i = 0; i < GiftData.Length; i++)
             {
-                int offset = fieldOffset + i*fieldSize;
+                int offset = fieldOffset + (i * fieldSize);
 
                 // Check too see if starters got modified
                 if (Array.IndexOf(entries, i) > - 1 && BitConverter.ToUInt16(FieldData, offset) != GiftData[i].Species)
@@ -140,6 +144,7 @@ namespace pk3DS
 
         private int entry = -1;
         private bool loaded;
+
         private void changeIndex(object sender, EventArgs e)
         {
             if (LB_Gifts.SelectedIndex < 0)
@@ -151,6 +156,7 @@ namespace pk3DS
             entry = LB_Gifts.SelectedIndex;
             loadEntry();
         }
+
         private void loadEntry()
         {
             bool oldloaded = loaded;
@@ -177,6 +183,7 @@ namespace pk3DS
 
             loaded |= oldloaded;
         }
+
         private void saveEntry()
         {
             GiftData[entry].Species = (ushort)CB_Species.SelectedIndex;
@@ -217,6 +224,11 @@ namespace pk3DS
                 rBST = CHK_BST.Checked,
             };
             specrand.Initialize();
+
+            // add Legendary/Mythical to final evolutions if checked
+            if (CHK_L.Checked) FinalEvo = FinalEvo.Concat(Legendary).ToArray();
+            if (CHK_E.Checked) FinalEvo = FinalEvo.Concat(Mythical).ToArray();
+
             var helditems = Randomizer.getRandomItemList();
             for (int i = 0; i < LB_Gifts.Items.Count; i++)
             {
@@ -260,6 +272,7 @@ namespace pk3DS
                 NUD_Form.Value = formrand.GetRandomForme(species);
                 CB_Gender.SelectedIndex = 0; // random
                 CB_Nature.SelectedIndex = 0; // random
+                NUD_IV0.Value = NUD_IV1.Value = NUD_IV2.Value = NUD_IV3.Value = NUD_IV4.Value = NUD_IV5.Value = -1; // random
 
                 if (MegaDictionary.Values.Any(z => z.Contains(CB_HeldItem.SelectedIndex)) && NUD_Form.Value != 0)
                     NUD_Form.Value = 0; // don't allow mega gifts to be form 1
@@ -305,6 +318,7 @@ namespace pk3DS
             {448, new[] {673}}, // Lucario @ Lucarionite
             {460, new[] {674}}, // Abomasnow @ Abomasite
         };
+
         private static readonly Dictionary<int, int[]> MegaDictionaryAO = new Dictionary<int, int[]>
         {
             {015, new[] {770}}, // Beedrill @ Beedrillite
@@ -325,6 +339,7 @@ namespace pk3DS
             {531, new[] {757}}, // Audino @ Audinite
             {719, new[] {764}}, // Diancie @ Diancite
         };
+
         private void changeSpecies(object sender, EventArgs e)
         {
             int index = LB_Gifts.SelectedIndex;

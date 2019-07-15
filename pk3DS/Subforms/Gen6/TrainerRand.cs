@@ -20,14 +20,17 @@ namespace pk3DS
             RandSettings.GetFormSettings(this, Controls);
         }
 
-        private string[] trName = Main.Config.getText(TextName.TrainerNames);
+        private readonly string[] trName = Main.Config.getText(TextName.TrainerNames);
         private readonly string[] trClass = Main.Config.getText(TextName.TrainerClasses);
         private readonly List<string> trClassnorep;
+        private static int[] Legendary = Legal.Legendary_6;
+        private static int[] Mythical = Legal.Mythical_6;
 
         private void B_Close_Click(object sender, EventArgs e)
         {
             Close();
         }
+
         private void B_Save_Click(object sender, EventArgs e)
         {
             if (WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Randomize all? Cannot undo.", "Double check Randomization settings before continuing.") != DialogResult.Yes)
@@ -71,6 +74,8 @@ namespace pk3DS
             RSTE.rTypeTheme = CHK_TypeTheme.Checked;
             RSTE.rTypeGymTrainers = CHK_GymTrainers.Checked;
             RSTE.rGymE4Only = CHK_GymE4Only.Checked;
+            RSTE.rMinPKM = NUD_RMin.Value;
+            RSTE.rMaxPKM = NUD_RMax.Value;
             RSTE.r6PKM = CHK_6PKM.Checked;
             RSTE.rRandomMegas = CHK_RandomMegaForm.Checked;
             RSTE.rForceFullyEvolved = CHK_ForceFullyEvolved.Checked;
@@ -108,6 +113,10 @@ namespace pk3DS
             };
             RSTE.rSpeciesRand.Initialize();
 
+            // add Legendary/Mythical to final evolutions if checked
+            if (CHK_L.Checked) RSTE.rFinalEvo = RSTE.rFinalEvo.Concat(Legendary).ToArray();
+            if (CHK_E.Checked) RSTE.rFinalEvo = RSTE.rFinalEvo.Concat(Mythical).ToArray();
+
             RSTE.rDoRand = true;
             RandSettings.SetFormSettings(this, Controls);
             Close();
@@ -129,15 +138,18 @@ namespace pk3DS
         {
             NUD_Level.Enabled = CHK_Level.Checked;
         }
+
         private void changeLevelPercent(object sender, EventArgs e)
         {
             CHK_Level.Checked = NUD_Level.Value != 0;
         }
+
         private void CHK_RandomGift_CheckedChanged(object sender, EventArgs e)
         {
             NUD_GiftPercent.Enabled = CHK_RandomGift.Checked;
             NUD_GiftPercent.Value = Convert.ToDecimal(CHK_RandomGift.Checked) * 15;
         }
+
         private void changeGiftPercent(object sender, EventArgs e)
         {
             CHK_RandomGift.Checked = NUD_GiftPercent.Value != 0;
@@ -165,6 +177,7 @@ namespace pk3DS
             CHK_ForceHighPower.Enabled = CHK_ForceHighPower.Checked = NUD_ForceHighPower.Enabled =
             CHK_NoFixedDamage.Enabled = CHK_NoFixedDamage.Checked = (CB_Moves.SelectedIndex == 1 || CB_Moves.SelectedIndex == 2);
         }
+
         private void CHK_6PKM_CheckedChanged(object sender, EventArgs e)
         {
             //if (CB_Moves.SelectedIndex == 0)

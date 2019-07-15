@@ -31,9 +31,10 @@ namespace pk3DS
             CB_HeldItem.Items.Clear();
             foreach (string s in itemlist)
                 CB_HeldItem.Items.Add(s);
-            loadData();
+            LoadData();
             RandSettings.GetFormSettings(this, tabPage2.Controls);
         }
+
         private readonly string FieldPath = Path.Combine(Main.RomFSPath, "DllField.cro");
         private byte[] FieldData;
         private readonly int fieldOffset = Main.Config.ORAS ? 0xF1B20 : 0xEE478;
@@ -42,9 +43,11 @@ namespace pk3DS
         private EncounterStatic6[] EncounterData;
         private readonly string[] itemlist = Main.Config.getText(TextName.ItemNames);
         private readonly string[] specieslist = Main.Config.getText(TextName.SpeciesNames);
-        private static int[] FinalEvo;
-        private static int[] ReplaceLegend;
-        
+        private static int[] FinalEvo = Legal.FinalEvolutions_6;
+        private static int[] Legendary = Legal.Legendary_6;
+        private static int[] Mythical = Legal.Mythical_6;
+        private static int[] ReplaceLegend = Legendary.Concat(Mythical).ToArray();
+
         private readonly string[] ability =
         {
             "Any (1 or 2)",
@@ -52,25 +55,28 @@ namespace pk3DS
             "Ability 2",
             "Hidden Ability",
         };
+
         private void B_Save_Click(object sender, EventArgs e)
         {
-            saveEntry();
-            saveData();
+            SaveEntry();
+            SaveData();
             RandSettings.SetFormSettings(this, tabPage2.Controls);
             Close();
         }
+
         private void B_Cancel_Click(object sender, EventArgs e)
         {
             Close();
         }
-        private void loadData()
+
+        private void LoadData()
         {
             FieldData = File.ReadAllBytes(FieldPath);
             EncounterData = new EncounterStatic6[count];
             LB_Encounters.Items.Clear();
             for (int i = 0; i < EncounterData.Length; i++)
             {
-                EncounterData[i] = new EncounterStatic6(FieldData.Skip(fieldOffset + i * fieldSize).Take(fieldSize).ToArray());
+                EncounterData[i] = new EncounterStatic6(FieldData.Skip(fieldOffset + (i * fieldSize)).Take(fieldSize).ToArray());
                 LB_Encounters.Items.Add($"{i:00} - {specieslist[EncounterData[i].Species]}");
             }
             foreach (var s in ability) CB_Ability.Items.Add(s);
@@ -80,17 +86,15 @@ namespace pk3DS
             CB_Gender.Items.Add("♂ / Male");
             CB_Gender.Items.Add("♀ / Female");
 
-            FinalEvo = Legal.FinalEvolutions_6;
-            ReplaceLegend = Legal.Legendary_Mythical_6;
-
             loaded = true;
             LB_Encounters.SelectedIndex = 0;
         }
-        private void saveData()
+
+        private void SaveData()
         {
             for (int i = 0; i < EncounterData.Length; i++)
             {
-                int offset = fieldOffset + i*fieldSize;
+                int offset = fieldOffset + (i * fieldSize);
                 // Write new data
                 Array.Copy(EncounterData[i].Write(), 0, FieldData, offset, fieldSize);
             }
@@ -99,18 +103,20 @@ namespace pk3DS
 
         private int entry = -1;
         private bool loaded;
-        private void changeIndex(object sender, EventArgs e)
+
+        private void ChangeIndex(object sender, EventArgs e)
         {
             if (LB_Encounters.SelectedIndex < 0)
                 return;
             if (!loaded)
                 return;
-            if (entry != -1) 
-                saveEntry();
+            if (entry != -1)
+                SaveEntry();
             entry = LB_Encounters.SelectedIndex;
-            loadEntry();
+            LoadEntry();
         }
-        private void loadEntry()
+
+        private void LoadEntry()
         {
             bool oldloaded = loaded;
             loaded = false;
@@ -129,7 +135,8 @@ namespace pk3DS
 
             loaded |= oldloaded;
         }
-        private void saveEntry()
+
+        private void SaveEntry()
         {
             EncounterData[entry].Species = (ushort)CB_Species.SelectedIndex;
             EncounterData[entry].HeldItem = CB_HeldItem.SelectedIndex;
@@ -162,6 +169,11 @@ namespace pk3DS
                 rBST = CHK_BST.Checked,
             };
             specrand.Initialize();
+
+            // add Legendary/Mythical to final evolutions if checked
+            if (CHK_L.Checked) FinalEvo = FinalEvo.Concat(Legendary).ToArray();
+            if (CHK_E.Checked) FinalEvo = FinalEvo.Concat(Mythical).ToArray();
+
             var items = Randomizer.getRandomItemList();
             for (int i = 0; i < LB_Encounters.Items.Count; i++)
             {
@@ -177,7 +189,9 @@ namespace pk3DS
 
                 // every other entry
                 else
+                {
                     species = specrand.GetRandomSpecies(species);
+                }
 
                 if (CHK_AllowMega.Checked)
                     formrand.AllowMega = true;
@@ -207,7 +221,7 @@ namespace pk3DS
             WinFormsUtil.Alert("Randomized all Static Encounters according to specification!");
         }
 
-        private void changeSpecies(object sender, EventArgs e)
+        private void ChangeSpecies(object sender, EventArgs e)
         {
             int index = LB_Encounters.SelectedIndex;
             LB_Encounters.Items[index] = index.ToString("00") + " - " + CB_Species.Text;

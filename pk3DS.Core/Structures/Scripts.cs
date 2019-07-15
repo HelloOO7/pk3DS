@@ -12,7 +12,7 @@ namespace pk3DS.Core
         internal static byte[] decompressScript(byte[] data)
         {
             data = data ?? new byte[0]; // Bad Input
-                
+
             using (MemoryStream mn = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(mn))
             {
@@ -31,11 +31,13 @@ namespace pk3DS.Core
                 return mn.ToArray();
             }
         }
+
         internal static byte[] readCompressed(byte[] data, int pos)
         {
             byte[] c1 = data.Skip(pos).TakeWhile(b => b >> 7 > 0).ToArray(); // Take while >= 0x80
             return c1.Concat(data.Skip(pos + c1.Length).Take(1)).ToArray(); // Take another
         }
+
         internal static byte[] decompressBytes(byte[] cb)
         {
             byte[] db = new byte[0];
@@ -90,7 +92,7 @@ namespace pk3DS.Core
             uint[] code = new uint[count];
             uint i = 0, j = 0, x = 0, f = 0;
             while (i < code.Length) {
-                int b = data[f++], 
+                int b = data[f++],
                     v = b & 0x7F;
                 if (++j == 1) // sign extension possible
                     x = (uint)((((v >> 6 == 0 ? 1 : 0) - 1) << 6) | v); // only for bit6 being set
@@ -120,6 +122,7 @@ namespace pk3DS.Core
                 return mn.ToArray();
             }
         }
+
         internal static byte[] compressBytes(byte[] db)
         {
             short cmd = BitConverter.ToInt16(db, 0);
@@ -171,7 +174,7 @@ namespace pk3DS.Core
                 {
                     byte bits = (byte)((byte)dv & 0x7F); dv >>= 7; // Take off 7 bits at a time
                     bitStorage |= (byte)(bits << (ctr*8)); // Write the 7 bits into storage
-                    bitStorage |= (byte)(1 << (7 + ctr++*8)); // continue reading flag
+                    bitStorage |= (byte)(1 << (7 + (ctr++*8))); // continue reading flag
                 }
                 byte[] compressedBits = BitConverter.GetBytes(bitStorage);
 
@@ -191,11 +194,12 @@ namespace pk3DS.Core
         {
             data = data ?? new byte[0];
             // Generates an x-byte wide space separated string array; leftovers included at the end.
-            string[] s = new string[data.Length/count + (data.Length % count > 0 ? 1 : 0)];
+            string[] s = new string[(data.Length/count) + (data.Length % count > 0 ? 1 : 0)];
             for (int i = 0; i < s.Length;i++)
                 s[i] = BitConverter.ToString(data.Skip(i*count).Take(count).ToArray()).Replace('-', ' ');
             return s;
         }
+
         internal static string[] getHexLines(uint[] data)
         {
             data = data ?? new uint[0];
@@ -205,6 +209,7 @@ namespace pk3DS.Core
                 s[i] = BitConverter.ToString(BitConverter.GetBytes(data[i])).Replace('-', ' ');
             return s;
         }
+
         internal static byte[] getBytes(uint[] data)
         {
             return data.Aggregate(new byte[0], (current, t) => current.Concat(BitConverter.GetBytes(t)).ToArray());
@@ -243,7 +248,7 @@ namespace pk3DS.Core
                         // Peek at next value
                         var next = (int)cmd[i++];
                         // Check Value against negative and zero... ?
-                        
+
                         op = eA(c, next);
                         break;
                     }
@@ -261,7 +266,7 @@ namespace pk3DS.Core
                         // Peek at next value
                         var next = (int)cmd[i++];
                         // Check Value against negative... ?
-                        
+
                         op = eA(c, next);
                         break;
                     }
@@ -401,7 +406,7 @@ namespace pk3DS.Core
                     {
                         var next = (int)cmd[i++];
                         // No sanity check needed
-                        
+
                         op = eA(c, next);
                         break;
                     }
@@ -425,8 +430,8 @@ namespace pk3DS.Core
                         var delta = (int)cmd[i++];
                         // sanity check range...
                         // negative.. weird
-                        
-                        int newOfs = line*4 + delta;
+
+                        int newOfs = (line * 4) + delta;
                         op = $"{Commands[c]} => 0x{newOfs:X4} ({delta})";
                         break;
                     }
@@ -440,10 +445,10 @@ namespace pk3DS.Core
                     }
                     case 0x82: // JumpIfElse
                     {
-                        var jOffset = i*4 -4; // todo: this may be the correct jump start point...
+                        var jOffset = (i * 4) - 4; // todo: this may be the correct jump start point...
                         var count = cmd[i++]; // switch case table
                         // sanity check
-                        
+
                         // Populate If-Case Tree
                         var tree = new List<string>();
 
@@ -451,14 +456,14 @@ namespace pk3DS.Core
                         for (int j = 0; j < count; j++)
                         {
                             var jmp = (int)cmd[i++];
-                            var toOffset = (i-2)*4 + jmp;
+                            var toOffset = ((i-2)*4) + jmp;
                             var ifValue = (int)cmd[i++];
                             tree.Add($"\t{ifValue} => 0x{toOffset:X4} ({jmp})");
                         }
                         // Default
                         {
                             int jmp = (int)cmd[i++];
-                            var toOffset = (i-2)*4 + jmp;
+                            var toOffset = ((i-2)*4) + jmp;
                             tree.Add($"\t{"*"} => 0x{toOffset:X4} ({jmp})");
                         }
 
@@ -575,7 +580,7 @@ namespace pk3DS.Core
                     {
                         // minimal sanity checks
                         // can return error code 0x1C
-                        int newPos = i + (int)(1 + 2*(cmd[i]/4) + 1);
+                        int newPos = i + (int)(1 + (2 *(cmd[i]/4)) + 1);
 
                         op = eA(c, newPos);
                         break;
@@ -636,14 +641,16 @@ namespace pk3DS.Core
             string parameters = arr.Length == 0 ? "" : string.Join(", ", arr.Select(z => $"{(Math.Abs(z) < 100 ? z.ToString() : "0x"+z.ToString("X4"))}"));
             return $"{cmd}({parameters})";
         }
+
         private static readonly Func<uint, float> getFloat = val => BitConverter.ToSingle(BitConverter.GetBytes(val), 0);
+
         internal static string eF(uint c, params uint[] arr)
         {
             string cmd = Commands[c];
             string parameters = arr.Length == 1 ? "" : string.Join(", ", arr.Select(z => getFloat(z)));
             return $"{cmd}({parameters})";
         }
-        
+
         internal static readonly Dictionary<uint, string> Commands = new Dictionary<uint, string>
         {// { 0x00, "$00" }, // Invalid Code
             { 0x01, "$01" },

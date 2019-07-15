@@ -32,10 +32,12 @@ namespace pk3DS
         private readonly int offset = 0x0059795A; // Default
         private readonly byte[] data;
         private int dataoffset;
+
         private void getDataOffset()
         {
             dataoffset = offset; // reset
         }
+
         private void setupDGV()
         {
             dgvTM.Columns.Clear();
@@ -72,12 +74,13 @@ namespace pk3DS
 
             getDataOffset();
             for (int i = 0; i < 100; i++) // TMs stored sequentially
-                tms.Add(BitConverter.ToUInt16(data, dataoffset + 2 * i));
+                tms.Add(BitConverter.ToUInt16(data, dataoffset + (2 * i)));
 
             ushort[] tmlist = tms.ToArray();
             for (int i = 0; i < tmlist.Length; i++)
             { dgvTM.Rows.Add(); dgvTM.Rows[i].Cells[0].Value = (i + 1).ToString(); dgvTM.Rows[i].Cells[1].Value = movelist[tmlist[i]]; }
         }
+
         private void setList()
         {
             // Gather TM/HM list.
@@ -89,7 +92,7 @@ namespace pk3DS
 
             // Set TM/HM list in
             for (int i = 0; i < 100; i++)
-                Array.Copy(BitConverter.GetBytes(tmlist[i]), 0, data, offset + 2 * i, 2);
+                Array.Copy(BitConverter.GetBytes(tmlist[i]), 0, data, offset + (2 * i), 2);
 
             // Set Move Text Descriptions back into Item Text File
             string[] itemDescriptions = Main.Config.getText(TextName.ItemFlavor);
@@ -100,7 +103,7 @@ namespace pk3DS
                 itemDescriptions[618 + i - 92] = moveDescriptions[tmlist[i]];
             for (int i = 96 - 1; i <= 100 - 1; i++) // TM96 - TM100
                 itemDescriptions[690 + i - 95] = moveDescriptions[tmlist[i]];
-            Main.Config.setText(TextName.ItemFlavor, itemDescriptions);
+            Main.Config.SetText(TextName.ItemFlavor, itemDescriptions);
         }
 
         private void formClosing(object sender, FormClosingEventArgs e)
@@ -130,22 +133,25 @@ namespace pk3DS
             WinFormsUtil.Alert("Randomized!");
         }
 
-        internal static void getTMHMList(ref ushort[] TMs)
+        internal static ushort[] getTMHMList()
         {
-            if (Main.ExeFSPath == null) return;
+            if (Main.ExeFSPath == null)
+                return new ushort[0];
             string[] files = Directory.GetFiles(Main.ExeFSPath);
-            if (!File.Exists(files[0]) || !Path.GetFileNameWithoutExtension(files[0]).Contains("code")) return;
+            if (!File.Exists(files[0]) || !Path.GetFileNameWithoutExtension(files[0]).Contains("code"))
+                return new ushort[0];
             byte[] data = File.ReadAllBytes(files[0]);
             int dataoffset = Util.IndexOfBytes(data, Signature, 0x400000, 0) + Signature.Length;
-            if (data.Length % 0x200 != 0) return;
+            if (data.Length % 0x200 != 0)
+                return new ushort[0];
 
             if (Main.Config.USUM)
                 dataoffset += 0x22;
             List<ushort> tms = new List<ushort>();
 
             for (int i = 0; i < 100; i++) // TMs stored sequentially
-                tms.Add(BitConverter.ToUInt16(data, dataoffset + 2 * i));
-            TMs = tms.ToArray();
+                tms.Add(BitConverter.ToUInt16(data, dataoffset + (2 * i)));
+            return tms.ToArray();
         }
     }
 }

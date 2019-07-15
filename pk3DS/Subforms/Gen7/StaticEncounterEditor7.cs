@@ -20,9 +20,11 @@ namespace pk3DS
         private readonly string[] natures = Main.Config.getText(TextName.Natures);
         private readonly string[] types = Main.Config.getText(TextName.Types);
         private readonly int[] oldStarters;
-        private static int[] FinalEvo;
-        private static int[] ReplaceLegend;
-        private static int[] BasicStarter;
+        private static int[] FinalEvo = Legal.FinalEvolutions_7;
+        private static int[] Legendary = Main.Config.USUM ? Legal.Legendary_USUM : Legal.Legendary_SM;
+        private static int[] Mythical = Main.Config.USUM ? Legal.Mythical_USUM : Legal.Mythical_SM;
+        private static int[] ReplaceLegend = Legendary.Concat(Mythical).ToArray();
+        private static int[] BasicStarter = Legal.BasicStarters_7;
 
         private readonly string[] gender =
         {
@@ -30,6 +32,7 @@ namespace pk3DS
             "♂ / Male",
             "♀ / Female",
         };
+
         private readonly string[] ability =
         {
             "Any (1 or 2)",
@@ -37,6 +40,7 @@ namespace pk3DS
             "Ability 2",
             "Hidden Ability",
         };
+
         private readonly string[] aura =
         {
             "(None)",
@@ -60,8 +64,8 @@ namespace pk3DS
             "All Stats (+3)",
         };
 
-        private static int[] Totem = { 020, 105, 735, 738, 743, 746, 752, 754, 758, 777, 778, 784 }; // Totem battles
-        private static int[] UnevolvedLegend = { 772, 789, 803 }; // Type: Null, Cosmog, Poipole gifts
+        private static readonly int[] Totem = { 020, 105, 735, 738, 743, 746, 752, 754, 758, 777, 778, 784 }; // Totem battles
+        private static readonly int[] UnevolvedLegend = { 772, 789, 803 }; // Type: Null, Cosmog, Poipole gifts
 
         public StaticEncounterEditor7(byte[][] infiles)
         {
@@ -148,13 +152,10 @@ namespace pk3DS
 
             NUD_Ally1.Maximum = NUD_Ally2.Maximum = Main.Config.USUM ? 251 : 136;
 
-            getListBoxEntries();
+            GetListBoxEntries();
             LB_Gift.SelectedIndex = 0;
             LB_Encounter.SelectedIndex = 0;
             LB_Trade.SelectedIndex = 0;
-            FinalEvo = Main.Config.USUM ? Legal.FinalEvolutions_USUM : Legal.FinalEvolutions_SM;
-            ReplaceLegend = Main.Config.USUM ? Legal.Legendary_Mythical_USUM : Legal.Legendary_Mythical_SM;
-            BasicStarter = Legal.BasicStarters_7;
 
             // Select last tab (Randomization) by default in case info already randomized.
             TC_Tabs.SelectedIndex = TC_Tabs.TabCount - 1;
@@ -162,7 +163,8 @@ namespace pk3DS
             RandSettings.GetFormSettings(this, Tab_Randomizer.Controls);
             // ExportEncounters();
         }
-        private void getListBoxEntries()
+
+        private void GetListBoxEntries()
         {
             loading = true;
             LB_Gift.Items.Clear();
@@ -170,11 +172,11 @@ namespace pk3DS
             LB_Trade.Items.Clear();
 
             for (int i = 0; i < Gifts.Length; i++)
-                LB_Gift.Items.Add(getEntryText(Gifts[i], i));
+                LB_Gift.Items.Add(GetEntryText(Gifts[i], i));
             for (int i = 0; i < Encounters.Length; i++)
-                LB_Encounter.Items.Add(getEntryText(Encounters[i], i));
+                LB_Encounter.Items.Add(GetEntryText(Encounters[i], i));
             for (int i = 0; i < Trades.Length; i++)
-                LB_Trade.Items.Add(getEntryText(Trades[i], i));
+                LB_Trade.Items.Add(GetEntryText(Trades[i], i));
             loading = false;
         }
 
@@ -184,19 +186,20 @@ namespace pk3DS
 
         private void B_Save_Click(object sender, EventArgs e)
         {
-            setGift();
-            setEncounter();
-            setTrade();
-            saveData();
+            SetGift();
+            SetEncounter();
+            SetTrade();
+            SaveData();
             RandSettings.SetFormSettings(this, Tab_Randomizer.Controls);
             Close();
         }
+
         private void B_Cancel_Click(object sender, EventArgs e)
         {
             Close();
         }
 
-        private void saveData()
+        private void SaveData()
         {
             files[0] = Gifts.SelectMany(file => file.Data).ToArray();
             files[1] = Encounters.SelectMany(file => file.Data).ToArray();
@@ -207,39 +210,64 @@ namespace pk3DS
 
             var dr = WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Starters have been changed. Update text references?", "Note that this only updates text references for the current language set in pk3DS.", "This can be changed from Options -> Language on the main window.");
             if (dr == DialogResult.Yes)
-                updateStarterText();
+                UpdateStarterText();
         }
 
-        private string getEntryText(int species, int entry)
+        private string GetEntryText(int species, int entry)
         {
             return $"{entry:00} - {specieslist[species]}";
         }
-        private string getEntryText(EncounterStatic enc, int entry)
+
+        private string GetEntryText(EncounterStatic enc, int entry)
         {
-            return getEntryText(enc.Species, entry);
+            return GetEntryText(enc.Species, entry);
         }
 
         private void LB_Gift_SelectedIndexChanged(object sender, EventArgs e)
         {
-            setGift();
+            SetGift();
             gEntry = LB_Gift.SelectedIndex;
-            getGift();
+            GetGift();
         }
+
         private void LB_Encounter_SelectedIndexChanged(object sender, EventArgs e)
         {
-            setEncounter();
+            SetEncounter();
             eEntry = LB_Encounter.SelectedIndex;
-            getEncounter();
+            GetEncounter();
+            GetAllies();
         }
+
         private void LB_Trade_SelectedIndexChanged(object sender, EventArgs e)
         {
-            setTrade();
+            SetTrade();
             tEntry = LB_Trade.SelectedIndex;
-            getTrade();
+            GetTrade();
         }
 
         private bool loading;
-        private void getGift()
+
+        private void GetAllies()
+        {
+            if (eEntry < 0)
+                return;
+            var entry = Encounters[eEntry];
+
+            // USUM has slots with SOS allies beyond slot 100, accommodate by trimming an extra character
+            int endTrim = eEntry < 100 ? 5 : 6;
+
+            if (entry.Ally1 == 0)
+                L_Ally1.Text = "No SOS Ally";
+            else
+                L_Ally1.Text = ((string)LB_Encounter.Items[entry.Ally1 - 1]).Remove(0, endTrim);
+
+            if (entry.Ally2 == 0)
+                L_Ally2.Text = "No SOS Ally";
+            else
+                L_Ally2.Text = ((string)LB_Encounter.Items[entry.Ally2 - 1]).Remove(0, endTrim);
+        }
+
+        private void GetGift()
         {
             if (gEntry < 0)
                 return;
@@ -259,7 +287,8 @@ namespace pk3DS
 
             loading = false;
         }
-        private void setGift()
+
+        private void SetGift()
         {
             if (gEntry < 0)
                 return;
@@ -275,7 +304,8 @@ namespace pk3DS
             entry.ShinyLock = CHK_G_Lock.Checked;
             entry.IsEgg = CHK_IsEgg.Checked;
         }
-        private void getEncounter()
+
+        private void GetEncounter()
         {
             if (eEntry < 0)
                 return;
@@ -320,7 +350,8 @@ namespace pk3DS
 
             loading = false;
         }
-        private void setEncounter()
+
+        private void SetEncounter()
         {
             if (eEntry < 0)
                 return;
@@ -364,7 +395,8 @@ namespace pk3DS
             entry.Ally1 = (int)NUD_Ally1.Value + 1;
             entry.Ally2 = (int)NUD_Ally2.Value + 1;
         }
-        private void getTrade()
+
+        private void GetTrade()
         {
             if (tEntry < 0)
                 return;
@@ -392,7 +424,8 @@ namespace pk3DS
 
             loading = false;
         }
-        private void setTrade()
+
+        private void SetTrade()
         {
             if (tEntry < 0)
                 return;
@@ -418,41 +451,41 @@ namespace pk3DS
             iv[5] = (int)NUD_TIV5.Value;
             entry.IVs = iv;
         }
-        
-        private void changeSpecies(object sender, EventArgs e)
+
+        private void ChangeSpecies(object sender, EventArgs e)
         {
             if (loading)
                 return;
-            var cb = sender as ComboBox;
-            if (cb == null)
+            if (!(sender is ComboBox cb))
                 return;
 
             if (sender == CB_GSpecies)
             {
                 var entry = Gifts[gEntry];
                 entry.Species = cb.SelectedIndex;
-                LB_Gift.Items[gEntry] = getEntryText(entry, gEntry);
+                LB_Gift.Items[gEntry] = GetEntryText(entry, gEntry);
             }
             else if (sender == CB_ESpecies)
             {
                 var entry = Encounters[eEntry];
                 entry.Species = cb.SelectedIndex;
-                LB_Encounter.Items[eEntry] = getEntryText(entry, eEntry);
+                LB_Encounter.Items[eEntry] = GetEntryText(entry, eEntry);
             }
             else if (sender == CB_TSpecies)
             {
                 var entry = Trades[tEntry];
                 entry.Species = cb.SelectedIndex;
-                LB_Trade.Items[tEntry] = getEntryText(entry, tEntry);
+                LB_Trade.Items[tEntry] = GetEntryText(entry, tEntry);
             }
         }
-        private void changeTID(object sender, EventArgs e)
+
+        private void ChangeTID(object sender, EventArgs e)
         {
             L_TTID.Text = $"Gen 7 ID: {NUD_TID.Value % 100000:000000}";
         }
 
         // Randomization
-        private SpeciesRandomizer getRandomizer()
+        private SpeciesRandomizer GetRandomizer()
         {
             var specrand = new SpeciesRandomizer(Main.Config)
             {
@@ -470,16 +503,22 @@ namespace pk3DS
                 rBST = CHK_BST.Checked,
             };
             specrand.Initialize();
+
+            // add Legendary/Mythical to final evolutions if checked
+            if (CHK_L.Checked) FinalEvo = FinalEvo.Concat(Legendary).ToArray();
+            if (CHK_E.Checked) FinalEvo = FinalEvo.Concat(Mythical).ToArray();
+
             return specrand;
         }
+
         private void B_Starters_Click(object sender, EventArgs e)
         {
             if (WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Randomize Starters? Cannot undo.", "Double check Randomization settings before continuing.") != DialogResult.Yes)
                 return;
 
-            setGift();
+            SetGift();
 
-            var specrand = getRandomizer();
+            var specrand = GetRandomizer();
             var formrand = new FormRandomizer(Main.Config) { AllowMega = false, AllowAlolanForm = true };
             var items = Randomizer.getRandomItemList();
             int[] banned = Legal.Z_Moves.Concat(new int[] { 165, 464, 621 }).ToArray();
@@ -495,9 +534,10 @@ namespace pk3DS
                     int basic() => (int)(Util.rnd32() % BasicStarter.Length);
                     t.Species = BasicStarter[basic()];
                 }
-
                 else
+                {
                     t.Species = specrand.GetRandomSpecies(oldStarters[i]);
+                }
 
                 if (CHK_AllowMega.Checked)
                     formrand.AllowMega = true;
@@ -526,21 +566,22 @@ namespace pk3DS
                 t.Nature = -1; // random
             }
 
-            getListBoxEntries();
-            getGift();
+            GetListBoxEntries();
+            GetGift();
 
             WinFormsUtil.Alert("Randomized Starters according to specification!");
         }
+
         private void B_RandAll_Click(object sender, EventArgs e)
         {
             if (WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Randomize Static Encounters? Cannot undo.", "Double check Randomization Settings before continuing.") != DialogResult.Yes)
                 return;
-            
-            setGift();
-            setEncounter();
-            setTrade();
 
-            var specrand = getRandomizer();
+            SetGift();
+            SetEncounter();
+            SetTrade();
+
+            var specrand = GetRandomizer();
             var formrand = new FormRandomizer(Main.Config) { AllowMega = false, AllowAlolanForm = true };
             var move = new LearnsetRandomizer(Main.Config, Main.Config.Learnsets);
             var items = Randomizer.getRandomItemList();
@@ -553,7 +594,7 @@ namespace pk3DS
                 var t = Gifts[i];
 
                 // Legendary-for-Legendary
-                if (CHK_ReplaceLegend.Checked && ReplaceLegend.Contains(t.Species) || UnevolvedLegend.Contains(t.Species))
+                if ((CHK_ReplaceLegend.Checked && ReplaceLegend.Contains(t.Species)) || UnevolvedLegend.Contains(t.Species))
                     t.Species = ReplaceLegend[randLegend()];
 
                 // every other entry
@@ -575,7 +616,9 @@ namespace pk3DS
                 if (CHK_SpecialMove.Checked)
                 {
                     if (CHK_Metronome.Checked)
+                    {
                         t.SpecialMove = 0; // remove Surf Pikachu's special move
+                    }
                     else
                     {
                         int rv;
@@ -587,7 +630,7 @@ namespace pk3DS
 
                 if (CHK_RandomAbility.Checked)
                     t.Ability = (sbyte)(Util.rand.Next(0, 3)); // 1, 2, or H
-                
+
                 if (CHK_ForceFullyEvolved.Checked && t.Level >= NUD_ForceFullyEvolved.Value && !FinalEvo.Contains(t.Species))
                     t.Species = FinalEvo[randFinalEvo()];
 
@@ -625,9 +668,16 @@ namespace pk3DS
 
                 if (CHK_RandomAbility.Checked)
                     t.Ability = (sbyte)(Util.rand.Next(1, 4)); // 1, 2, or H
-                
+
                 if (CHK_ForceFullyEvolved.Checked && t.Level >= NUD_ForceFullyEvolved.Value && !FinalEvo.Contains(t.Species))
                     t.Species = FinalEvo[randFinalEvo()];
+
+                if (t.IV3)
+                    t.IVs = new[] { -4, -1, -1, -1, -1, -1 }; // random with IV3 flag
+                else
+                    t.IVs = new[] { -1, -1, -1, -1, -1, -1 }; // random
+
+                t.EVs = new[] { 0, 0, 0, 0, 0, 0 }; // reset EVs
 
                 t.Form = Randomizer.GetRandomForme(t.Species, CHK_AllowMega.Checked, true, Main.SpeciesStat);
                 t.Gender = 0; // random
@@ -654,24 +704,25 @@ namespace pk3DS
 
                 if (CHK_RandomAbility.Checked)
                     t.Ability = (sbyte)(Util.rand.Next(0, 3)); // 1, 2, or H
-                
+
                 if (CHK_ForceFullyEvolved.Checked && t.Level >= NUD_ForceFullyEvolved.Value && !FinalEvo.Contains(t.Species))
                     t.Species = FinalEvo[randFinalEvo()]; // only do offered species to be fair
 
                 t.Form = Randomizer.GetRandomForme(t.Species, CHK_AllowMega.Checked, true, Main.SpeciesStat);
                 t.Nature = (int)(Util.rnd32() % CB_TNature.Items.Count); // randomly selected
+                t.IVs = new[] { -1, -1, -1, -1, -1, -1 }; // random
             }
 
-            getListBoxEntries();
-            getGift();
-            getEncounter();
-            getTrade();
+            GetListBoxEntries();
+            GetGift();
+            GetEncounter();
+            GetTrade();
 
             WinFormsUtil.Alert("Randomized Static Encounters according to specification!");
         }
 
         // Mirror Changes
-        private void updateStarterText()
+        private void UpdateStarterText()
         {
             var gr = Main.Config.getGARCReference("storytext");
             int file = Main.Config.USUM ? 39 : 41;
@@ -679,7 +730,7 @@ namespace pk3DS
             {
                 // get Story Text
                 var sr = gr.getRelativeGARC(i, gr.Name);
-                var s = Main.Config.getGARCByReference(sr);
+                var s = Main.Config.GetGARCByReference(sr);
                 byte[][] storytextdata = s.Files;
 
                 string[] storyText = TextFile.getStrings(Main.Config, storytextdata[file]);
@@ -726,7 +777,7 @@ namespace pk3DS
         private void ModifyLevels(object sender, EventArgs e)
         {
             if (WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Modify all current Levels?", "Cannot undo.") != DialogResult.Yes) return;
-            
+
             for (int i = 0; i < LB_Encounter.Items.Count; i++)
             {
                 LB_Encounter.SelectedIndex = i;

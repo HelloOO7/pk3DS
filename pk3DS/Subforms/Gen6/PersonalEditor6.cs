@@ -35,6 +35,7 @@ namespace pk3DS
             abilities[0] = items[0] = moves[0] = "";
             string[][] AltForms = Main.Config.Personal.getFormList(species, Main.Config.MaxSpeciesID);
             species = Main.Config.Personal.getPersonalEntryList(AltForms, species, Main.Config.MaxSpeciesID, out baseForms, out formVal);
+            TMHMEditor6.getTMHMList(Main.Config.ORAS, out TMs, out HMs);
 
             Setup(); //Turn string resources into arrays
             CB_Species.SelectedIndex = 1;
@@ -78,13 +79,11 @@ namespace pk3DS
         private readonly ushort[] tutor4 = { 380, 388, 180, 495, 270, 271, 478, 472, 283, 200, 278, 289, 446, 214, 285 };
 
         private readonly int[] baseForms, formVal;
+        private readonly ushort[] TMs, HMs;
         int entry = -1;
         #endregion
         private void Setup()
         {
-            ushort[] TMs = new ushort[0];
-            ushort[] HMs = new ushort[0];
-            TMHMEditor6.getTMHMList(Main.Config.ORAS, ref TMs, ref HMs);
             CLB_TMHM.Items.Clear();
             int hmcount = Main.Config.ORAS ? 7 : 5;
 
@@ -172,6 +171,7 @@ namespace pk3DS
             entry = CB_Species.SelectedIndex;
             readEntry();
         }
+
         private void ByteLimiter(object sender, EventArgs e)
         {
             if (!(sender is MaskedTextBox mtb))
@@ -184,6 +184,7 @@ namespace pk3DS
         }
 
         private PersonalInfo pkm;
+
         private void readInfo()
         {
             pkm = Main.SpeciesStat[entry];
@@ -251,6 +252,7 @@ namespace pk3DS
                         CLB_ORASTutors.SetItemChecked(ctr++, pkm.SpecialTutors[i][b]);
             }
         }
+
         private void readEntry()
         {
             readInfo();
@@ -268,13 +270,14 @@ namespace pk3DS
                 {
                     Color c = rawImg.GetPixel(x, y);
                     bigImg.SetPixel(2 * x, 2 * y, c);
-                    bigImg.SetPixel(2 * x + 1, 2 * y, c);
-                    bigImg.SetPixel(2 * x, 2 * y + 1, c);
-                    bigImg.SetPixel(2 * x + 1, 2 * y + 1, c);
+                    bigImg.SetPixel((2 * x) + 1, 2 * y, c);
+                    bigImg.SetPixel(2 * x, (2 * y) + 1, c);
+                    bigImg.SetPixel((2 * x) + 1, (2 * y) + 1, c);
                 }
             }
             PB_MonSprite.Image = bigImg;
         }
+
         private void savePersonal()
         {
             pkm.HP = Convert.ToByte(TB_BaseHP.Text);
@@ -328,6 +331,7 @@ namespace pk3DS
                 for (int t = 0; t < len[i]; t++)
                     pkm.SpecialTutors[i][t] = CLB_ORASTutors.GetItemChecked(ctr++);
         }
+
         private void saveEntry()
         {
             savePersonal();
@@ -359,7 +363,8 @@ namespace pk3DS
                 SameTypeChance = NUD_TypePercent.Value,
                 SameEggGroupChance = NUD_Egg.Value,
                 StatDeviation = NUD_StatDev.Value,
-                AllowWonderGuard = CHK_WGuard.Checked
+                AllowWonderGuard = CHK_WGuard.Checked,
+                MoveIDsTMs = TMs,
             };
             rnd.Execute();
             Main.SpeciesStat.Select(z => z.Write()).ToArray().CopyTo(files, 0);
@@ -367,6 +372,7 @@ namespace pk3DS
             readEntry();
             WinFormsUtil.Alert("Randomized all Pokémon Personal data entries according to specification!", "Press the Dump All button to view the new Personal data!");
         }
+
         private void B_ModifyAll(object sender, EventArgs e)
         {
             if (WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Modify all? Cannot undo.", "Double check Modification settings in the Enhancements tab.") != DialogResult.Yes) return;
@@ -394,6 +400,10 @@ namespace pk3DS
                         CLB_ORASTutors.SetItemCheckState(ao, CheckState.Unchecked);
                 }
 
+                if (CHK_FullHMCompatibility.Checked)
+                    for (int h = 100; h < CLB_TMHM.Items.Count; h++)
+                        CLB_TMHM.SetItemCheckState(h, CheckState.Checked);
+
                 if (CHK_QuickHatch.Checked)
                     TB_HatchCycles.Text = 1.ToString();
                 if (CHK_CatchRateMod.Checked)
@@ -402,7 +412,9 @@ namespace pk3DS
             CB_Species.SelectedIndex = 1;
             WinFormsUtil.Alert("Modified all Pokémon Personal data entries according to specification!", "Press the Dump All button to view the new Personal data!");
         }
+
         private bool dumping;
+
         private void B_Dump_Click(object sender, EventArgs e)
         {
             if (DialogResult.Yes != WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Dump all Personal Entries to Text File?"))
@@ -442,11 +454,13 @@ namespace pk3DS
             string path = sfd.FileName;
             File.WriteAllLines(path, lines, Encoding.Unicode);
         }
+
         private void CHK_Stats_CheckedChanged(object sender, EventArgs e)
         {
             L_StatDev.Visible = NUD_StatDev.Visible = CHK_Stats.Checked;
             CHK_rHP.Enabled = CHK_rATK.Enabled = CHK_rDEF.Enabled = CHK_rSPA.Enabled = CHK_rSPD.Enabled = CHK_rSPE.Enabled = CHK_Stats.Checked;
         }
+
         private void CHK_Ability_CheckedChanged(object sender, EventArgs e)
         {
             CHK_WGuard.Enabled = CHK_Ability.Checked;
